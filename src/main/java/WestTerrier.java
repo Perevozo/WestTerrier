@@ -151,6 +151,7 @@ public class WestTerrier {
                         Elements linkElement = tableRows.select("a[href]");
                         tableData.add(extractHyperlinks(pageUrl));
 
+
                         Thread.sleep(3000);
                         //System.out.println(tableData.get(0));
 
@@ -158,6 +159,7 @@ public class WestTerrier {
                         if (page >=11148){
                             hasNextPage = false;
                         }
+
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
@@ -238,37 +240,42 @@ public class WestTerrier {
                         String westTitle = title.text();
                         int nameId = westTitle.indexOf(':');
                         if (nameId != -1) {
-
                             String modifiedWest = westTitle.substring(nameId + 3);
                             Number num = numberFormat.parse(id);
                             Dog dog = new Dog();
-                            if (parser(num.intValue()).get(2).equals("Reg. number:")){
-                                if (parser(num.intValue()).contains("Breeder:")){
+                            if (parser(num.intValue()).get(2).equals("Reg. number:")) {
+                                if (parser(num.intValue()).contains("Breeder:")) {
                                     dog.setBreeder(parser(num.intValue()).get(5));
                                 }
-                            } else if (parser(num.intValue()).contains("Breeder:")){
+                            } else if (parser(num.intValue()).contains("Breeder:")) {
                                 dog.setBreeder(parser(num.intValue()).get(3));
                             } else {
                                 dog.setBreeder("BREEDER HAS NOT FOUND");
                             }
-                            if (dog.getBreeder() == null){
+                            if (dog.getBreeder() == null) {
                                 dog.setBreeder("BREEDER HAS NOT FOUND");
                             }
 
-                            if (parser(num.intValue()).get(0).equals("Date of birth:")){
+                            if (parser(num.intValue()).get(0).equals("Date of birth:")) {
                                 dog.setBirthday(westBirthDay(parser(num.intValue()).get(1)));
                             } else {
                                 dog.setBirthday(null);
                             }
-                            dog.setSex(westSex("http://westieinfo.com/DB/pes.php?id="+id));
+                            dog.setSex(westSex("http://westieinfo.com/DB/pes.php?id=" + id));
 
                             dog.setName(modifiedWest);
-                            dog.setWestURL("http://westieinfo.com/DB/"+modifiedHref);
-                            dog.setFatherID(parserURl(Integer.parseInt(id)).get(0));
-                            dog.setMotherID(parserURl(Integer.parseInt(id)).get(7));
-
+                            dog.setWestURL("http://westieinfo.com/DB/" + modifiedHref);
+                            List<Integer> parentsIds = parserURl(Integer.parseInt(id));
+                            if (!parentsIds.isEmpty() && parentsIds.size() >= 8) {
+                                dog.setFatherID(parentsIds.get(0));
+                                dog.setMotherID(parentsIds.get(7));
+                            } else {
+                                dog.setMotherID(null);
+                                dog.setFatherID(null);
+                            }
                             String json = objectMapper.writeValueAsString(dog);
                             System.out.println(json);
+
                         }
                     }
                 }
@@ -278,6 +285,7 @@ public class WestTerrier {
         }
         return url;
     }
+
 
 
 
@@ -342,10 +350,25 @@ public class WestTerrier {
                     // Просто добавляем parentsId в список, не выполняя дополнительные проверки
                     parentsList.add(Integer.parseInt(parentsId));
                 }
-
             }
         }
 
+        return parentsList;
+    }
+    private static List<Integer> parents(Integer id) throws IOException{
+        Document doc = Jsoup.connect("http://westieinfo.com/DB/pes.php?id=" + id).get();
+        List<Integer> parentsList = new ArrayList<>();
+
+        Element table = doc.select("table#peditab").first();
+
+        // Получаем все ссылки в таблице
+        for (Element link : table.select("a[href]")) {
+            String href = link.attr("href");
+            // Получаем идентификатор из ссылки
+            String idx = href.substring(href.lastIndexOf('=') + 1);
+            System.out.println("ID: " + idx);
+            parentsList.add(Integer.parseInt(idx));
+        }
         return parentsList;
     }
 
