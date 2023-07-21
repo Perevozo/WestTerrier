@@ -355,22 +355,6 @@ public class WestTerrier {
 
         return parentsList;
     }
-    private static List<Integer> parents(Integer id) throws IOException{
-        Document doc = Jsoup.connect("http://westieinfo.com/DB/pes.php?id=" + id).get();
-        List<Integer> parentsList = new ArrayList<>();
-
-        Element table = doc.select("table#peditab").first();
-
-        // Получаем все ссылки в таблице
-        for (Element link : table.select("a[href]")) {
-            String href = link.attr("href");
-            // Получаем идентификатор из ссылки
-            String idx = href.substring(href.lastIndexOf('=') + 1);
-            System.out.println("ID: " + idx);
-            parentsList.add(Integer.parseInt(idx));
-        }
-        return parentsList;
-    }
 
 }
 
