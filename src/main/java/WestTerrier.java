@@ -1,45 +1,31 @@
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import items.Dog;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-
-
 import java.io.IOException;
-
-
-
 import java.text.NumberFormat;
 import java.text.ParseException;
-
-import java.time.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import java.time.format.DateTimeFormatter;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import org.jsoup.Connection.Response;
-import org.json.JSONObject;
 
 
 public class WestTerrier {
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException {
         WestTerrier ws = new WestTerrier();
         String url = "http://westieinfo.com/DB/";
         ws.parseTable(url,1);
-        //ws.parserURl(37136);
-
-
-
-        //ws.westTerrier(url);
+        ws.parents(37136);
 
     }
 
@@ -91,48 +77,6 @@ public class WestTerrier {
 
     private static String WHO_SCORED_URL = "http://westieinfo.com/DB/seznam.php?pos=1";
 
-    public void gitHub() throws InterruptedException, IOException {
-        JSONObject jsonObject = executeRequest(1);
-
-        //Count the total number of pages
-        Integer totalPages = jsonObject.getJSONObject("paging").getInt("totalPages");
-
-        for (int i = 1; i < totalPages; i++) {
-            //It's better to sleep for some seconds to avoid 403 errors
-            Thread.sleep(3000);
-
-            jsonObject = executeRequest(i);
-            handleData(jsonObject);
-        }
-    }
-
-    /**
-     * Execute the request to the server.
-     * @param page The page number.
-     * @return Returns the {@link JSONObject} from the body.
-     * @throws IOException
-     */
-
-
-    private static JSONObject executeRequest(Integer page) throws IOException{
-        String url = String.format(WHO_SCORED_URL, page);
-        Response response = Jsoup.connect(url)
-                .timeout(2000) //2 seconds timeout
-                .header("Accept-Encoding", "gzip, deflate, sdch")
-                .header("Host", "westieinfo.com")
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36")
-                .header("Referer", "http://westieinfo.com/DB/")
-                .header("X-Requested-With", "XMLHttpRequest")
-                .ignoreContentType(true)
-                .execute();
-        String body = response.body();
-        JSONObject jsonObject = new JSONObject(body);
-        return jsonObject;
-    }
-    private static void handleData(JSONObject jsonObject){
-        //My amazing business logic
-        System.out.println(jsonObject);
-    }
 
 
     private static List<String> parseTable(String url, Integer page) {
@@ -151,9 +95,8 @@ public class WestTerrier {
                         Elements linkElement = tableRows.select("a[href]");
                         tableData.add(extractHyperlinks(pageUrl));
 
-
                         Thread.sleep(3000);
-                        //System.out.println(tableData.get(0));
+                        System.out.println(tableData);
 
                         page++;
                         if (page >=11148){
@@ -356,7 +299,84 @@ public class WestTerrier {
         return parentsList;
     }
 
+    private static List<String> parents(Integer id) throws IOException {
+        Document doc = Jsoup.connect("http://westieinfo.com/DB/pes.php?id=" + id).get();
+        Elements rows = doc.select("tr");
+        Elements links = rows.select("a[href]");
+        List<String> parentsList = new ArrayList<>();
+
+        // Добавляем проверку наличия ссылок перед началом извлечения идентификаторов
+        if (links.isEmpty()) {
+            System.out.println("No links found on the page.");
+            return parentsList;
+        }
+
+
+        for (Element link : links) {
+            String href = link.attr("href");
+            int index = href.indexOf('&');
+
+            if (href.contains("pes.php") && index != -1) {
+                String modifiedHref = href.substring(0, index);
+                //System.out.println("http://westieinfo.com/DB/"+modifiedHref+"   "+link.text());
+                parentsList.add("http://westieinfo.com/DB/"+modifiedHref+"   "+link.text()+"\n");
+
+            }
+        }
+        System.out.println(sortParents(parentsList));
+        return sortParents(parentsList);
+    }
+
+    private static List<String> sortParents(List<String> parentsList) {
+        List<String> sortedParents = new ArrayList<>();
+
+        if (parentsList.size() >= 14) {
+            // Subtract 1 from each index since list indexes start at 0
+            sortedParents.add(parentsList.get(0));
+            sortedParents.add(parentsList.get(7)+"\n");
+
+            sortedParents.add(parentsList.get(1));
+            sortedParents.add(parentsList.get(4)+"\n");
+            sortedParents.add(parentsList.get(8));
+            sortedParents.add(parentsList.get(11)+"\n");
+
+            sortedParents.add(parentsList.get(2));
+            sortedParents.add(parentsList.get(3));
+            sortedParents.add(parentsList.get(5));
+            sortedParents.add(parentsList.get(6)+"\n");
+
+            sortedParents.add(parentsList.get(9));
+            sortedParents.add(parentsList.get(10));
+            sortedParents.add(parentsList.get(12));
+            sortedParents.add(parentsList.get(13)+"\n");
+        } else {
+            System.out.println("The list has fewer than 14 elements.");
+        }
+
+        return sortedParents;
+    }
+    private static List<Integer> getWestId (String url) throws IOException {
+        Document doc = Jsoup.connect(url).get();
+        Elements links = doc.select("a[href]");
+        List<Integer> idList = new ArrayList<>();
+
+        for (Element link : links) {
+            String href = link.attr("href");
+            int index = href.indexOf('&');
+            if (href.contains("pes.php") && index != -1) {
+                String modifiedHref = href.substring(0, index);
+                int indexId = modifiedHref.indexOf('=');
+                if (indexId != -1) {
+                    String id = modifiedHref.substring(indexId + 1);
+                    idList.add(Integer.parseInt(id));
+                }
+            }
+        }
+        return idList;
+    }
+
 }
+
 
 
 
