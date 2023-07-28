@@ -1,4 +1,7 @@
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import items.Dog;
 import org.jsoup.Jsoup;
@@ -6,7 +9,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.time.LocalDate;
@@ -21,13 +27,7 @@ import java.util.regex.PatternSyntaxException;
 
 
 public class WestTerrier {
-    public static void main(String[] args) throws IOException {
-        WestTerrier ws = new WestTerrier();
-        String url = "http://westieinfo.com/DB/";
-        ws.parseTable(url,1);
-        ws.parents(37136);
 
-    }
 
     public void westTerrier(String params) throws IOException {
         try {
@@ -47,7 +47,7 @@ public class WestTerrier {
 
     public static List<String> parser(Integer id) throws IOException {
         List<String> list = new ArrayList<>();
-        Document doc = Jsoup.connect("http://westieinfo.com/DB/pes.php?id="+id).get();
+        Document doc = Jsoup.connect("http://westieinfo.com/DB/pes.php?id=" + id).get();
         Elements rows = doc.select("tr");
         String str = System.in.toString();
         Pattern p = Pattern.compile("[A-Z]");
@@ -74,39 +74,41 @@ public class WestTerrier {
     }
 
 
-
     private static String WHO_SCORED_URL = "http://westieinfo.com/DB/seznam.php?pos=1";
 
 
-
-    private static List<String> parseTable(String url, Integer page) {
+    public static List<String> parseTable(String url, Integer page) {
         List<String> tableData = new ArrayList<>();
 
 
-                try {
-                    boolean hasNextPage = true;
+        try {
+            boolean hasNextPage = true;
 
-                    while (hasNextPage) {
-                        String pageUrl = url + "seznam.php?pos=" + page;
-                        Document doc = Jsoup.connect(pageUrl).get();
-                        Elements tableRows = doc.select("div.list0");
-                        Elements westURl = tableRows.select("a[href]");
-                        String URL = westURl.text();
-                        Elements linkElement = tableRows.select("a[href]");
-                        tableData.add(extractHyperlinks(pageUrl));
+            while (hasNextPage) {
+                System.out.println("test");
+                String pageUrl = url + "seznam.php?pos=" + page;
+                Document doc = Jsoup.connect(pageUrl).get();
+                Elements tableRows = doc.select("div.list0");
+                Elements westURl = tableRows.select("a[href]");
+                String URL = westURl.text();
+                Elements linkElement = tableRows.select("a[href]");
+                tableData.add(extractHyperlinks(pageUrl));
 
-                        Thread.sleep(3000);
-                        System.out.println(tableData);
+                //Thread.sleep(3000);
+                System.out.println("test");
+                System.out.println(tableData);
+                hasNextPage=false;
+               /* page++;
+                if (page >= 11148) {
+                    hasNextPage = false;
+                }*/
 
-                        page++;
-                        if (page >=11148){
-                            hasNextPage = false;
-                        }
 
-                    }
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+
+        } catch (IOException  e) {
+            e.printStackTrace();
+        }
 
         return tableData;
     }
@@ -131,11 +133,11 @@ public class WestTerrier {
 
                         }
                     }
-                    if (tableData.contains("|<<")){
+                    if (tableData.contains("|<<")) {
                         tableData.remove(tableData.indexOf("|<<"));
                     }
-                    if (tableData.contains("<<\t")){
-                    tableData.remove(tableData.indexOf("<<\t"));
+                    if (tableData.contains("<<\t")) {
+                        tableData.remove(tableData.indexOf("<<\t"));
                     }
                     if (tableData.contains(">>")) {
                         tableData.remove(tableData.indexOf(">>"));
@@ -147,7 +149,7 @@ public class WestTerrier {
                     tableData.remove(5);
                     tableData.remove(0);
                     //int numberOfElement = tableData.indexOf("7432");
-                    System.out.println("Element:"+tableData.get(3));
+                    System.out.println("Element:" + tableData.get(3));
 
                 }
                 System.out.println(tableData);
@@ -165,8 +167,10 @@ public class WestTerrier {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         NumberFormat numberFormat = NumberFormat.getInstance();
+        List<Dog> dogs = new ArrayList<>();
 
-        try {
+       try{
+
             Document doc = Jsoup.connect(url).get();
             Elements links = doc.select("a[href]");
 
@@ -216,18 +220,21 @@ public class WestTerrier {
                                 dog.setMotherID(null);
                                 dog.setFatherID(null);
                             }
-                            String json = objectMapper.writeValueAsString(dog);
-                            System.out.println(json);
-
+                            dogs.add(dog);
+                            writeDogsToFile(dogs);
                         }
                     }
                 }
             }
-        } catch (IOException | ParseException e) {
-            e.printStackTrace();
+
+        } catch (ParseException parseException) {
+            parseException.printStackTrace();
         }
+
         return url;
     }
+
+
 
 
 
@@ -375,12 +382,34 @@ public class WestTerrier {
         return idList;
     }
 
+    public static void writeDogsToFile(List<Dog> dogs) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        String json = objectMapper.writeValueAsString(dogs);
+        Files.write(Paths.get("F:\\Projects\\WestTerrier\\Wests.txt"), json.getBytes(StandardCharsets.UTF_8));
+    }
+
+
+    public static List<Dog> readDogFromFile() throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        String json = new String(Files.readAllBytes(Paths.get("Wests.txt")), StandardCharsets.UTF_8);
+        return objectMapper.readValue(json, new TypeReference<List<Dog>>() {});
+    }
+    public static void printDogsFromFile() throws IOException {
+        List<Dog> readDogs = readDogFromFile();
+        for (Dog dog : readDogs) {
+            System.out.println("Deserialized Dog:");
+            System.out.println("Name: " + dog.getName());
+            System.out.println("Birthday: " + dog.getBirthday());
+            System.out.println("Breeder: " + dog.getBreeder());
+            System.out.println("Father ID: " + dog.getFatherID());
+            System.out.println("Mother ID: " + dog.getMotherID());
+            System.out.println("Sex: " + dog.getSex());
+            System.out.println("WestURL: " + dog.getWestURL());
+        }
+    }
+
+
 }
-
-
-
-
-
-
-
-

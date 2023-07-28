@@ -1,9 +1,10 @@
 package items;
 
+import java.io.Serializable;
 import java.time.LocalDate;
-import java.util.Date;
 
-public class Dog {
+
+public class Dog implements Serializable {
     private String name;
     private LocalDate birthday;
     private String sex;
