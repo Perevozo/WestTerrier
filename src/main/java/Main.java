@@ -5,7 +5,7 @@ public class Main {
         WestTerrier ws = new WestTerrier();
         String url = "http://westieinfo.com/DB/";
         ws.parseTable(url,1);
-        ws.readDogFromFile();
+        //ws.readDogFromFile();
         ws.printDogsFromFile();
 
     }

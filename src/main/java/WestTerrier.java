@@ -92,7 +92,7 @@ public class WestTerrier {
                 Elements westURl = tableRows.select("a[href]");
                 String URL = westURl.text();
                 Elements linkElement = tableRows.select("a[href]");
-                tableData.add(extractHyperlinks(pageUrl));
+                tableData.add(extractHyperlinks(pageUrl)+"\n");
 
                 //Thread.sleep(3000);
                 System.out.println("test");
@@ -222,6 +222,7 @@ public class WestTerrier {
                             }
                             dogs.add(dog);
                             writeDogsToFile(dogs);
+                            System.out.println(parents(Integer.parseInt(id)));
                         }
                     }
                 }
@@ -306,7 +307,7 @@ public class WestTerrier {
         return parentsList;
     }
 
-    private static List<String> parents(Integer id) throws IOException {
+    public static List<String> parents(Integer id) throws IOException {
         Document doc = Jsoup.connect("http://westieinfo.com/DB/pes.php?id=" + id).get();
         Elements rows = doc.select("tr");
         Elements links = rows.select("a[href]");
@@ -318,18 +319,23 @@ public class WestTerrier {
             return parentsList;
         }
 
-
         for (Element link : links) {
             String href = link.attr("href");
             int index = href.indexOf('&');
 
             if (href.contains("pes.php") && index != -1) {
                 String modifiedHref = href.substring(0, index);
-                //System.out.println("http://westieinfo.com/DB/"+modifiedHref+"   "+link.text());
-                parentsList.add("http://westieinfo.com/DB/"+modifiedHref+"   "+link.text()+"\n");
-
+                parentsList.add("http://westieinfo.com/DB/" + modifiedHref + "   " + link.text() + "\n");
             }
         }
+
+        // Запись списка в файл
+        try (FileWriter fl = new FileWriter("F:\\Projects\\WestTerrier\\WestsParents.txt",true)) {
+            for (String parent : sortParents(parentsList)) {
+                fl.write(parent);
+            }
+        }
+
         System.out.println(sortParents(parentsList));
         return sortParents(parentsList);
     }
@@ -339,7 +345,7 @@ public class WestTerrier {
 
         if (parentsList.size() >= 14) {
             // Subtract 1 from each index since list indexes start at 0
-            sortedParents.add(parentsList.get(0));
+            sortedParents.add("\n"+parentsList.get(0));
             sortedParents.add(parentsList.get(7)+"\n");
 
             sortedParents.add(parentsList.get(1));
@@ -355,7 +361,7 @@ public class WestTerrier {
             sortedParents.add(parentsList.get(9));
             sortedParents.add(parentsList.get(10));
             sortedParents.add(parentsList.get(12));
-            sortedParents.add(parentsList.get(13)+"\n");
+            sortedParents.add(parentsList.get(13)+"\n"+"--------------------------------");
         } else {
             System.out.println("The list has fewer than 14 elements.");
         }
